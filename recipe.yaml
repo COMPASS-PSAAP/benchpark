@@ -1,0 +1,103 @@
+schema_version: 1
+
+context:
+  name: benchpark
+  version: "0.1.0"
+  git_url: https://github.com/COMPASS-PSAAP/benchpark.git
+  git_rev: develop
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  - git: ${{ git_url }}
+    rev: ${{ git_rev }}
+  # For iterating against a local checkout instead, comment out the git source
+  # above and use:
+  # - path: ../../../benchpark
+  #   use_gitignore: true
+
+build:
+  number: 0
+  # Pure scripts + YAML data; nothing compiled. The launcher is POSIX sh, so
+  # this is Linux/macOS only in practice — which matches benchpark, since it
+  # drives Spack and Ramble.
+  noarch: generic
+  script:
+    file: build.sh
+
+requirements:
+  run:
+    - python >=3.8
+    # git is not optional: `benchpark setup` clones Spack, Ramble and
+    # spack-packages at the commits pinned in checkout-versions.yaml.
+    - git
+    # benchpark itself
+    - pyyaml
+    - deepdiff
+    - xmltodict
+    # Ramble runs under this same interpreter, so its imports have to resolve
+    # here too (see requirements.txt in the repo).
+    - setuptools
+    - pandas
+    - scipy
+    - matplotlib-base
+    - tqdm
+    - deprecation
+    - protobuf
+    # Only needed if you use Ramble's GCS fetcher / BigQuery upload. Uncomment
+    # if you do; they pull in a large dependency tree.
+    # - google-cloud-storage
+    # - google-cloud-bigquery
+    # - google-api-core
+    #
+    # Spack will want these to build anything. Left out on purpose: on an HPC
+    # box you almost always want the site's real toolchain and tar/patch/make,
+    # not conda's. Add them if you are building in a bare container.
+    # - make
+    # - patch
+    # - curl
+    # - gnupg
+
+tests:
+  - script:
+      # main.py handles -V/--version before importing anything, specifically to
+      # avoid triggering the bootstrap clone. Any other subcommand (including
+      # --help) will try to reach the network, so do not test those here.
+      - test "$(benchpark --version)" = "${{ version }}"
+      - test -f "$PREFIX/share/benchpark/lib/main.py"
+      - test -f "$PREFIX/share/benchpark/checkout-versions.yaml"
+      - test -d "$PREFIX/share/benchpark/var/sys_repo"
+  - package_contents:
+      bin:
+        - benchpark
+        - benchpark-python
+
+about:
+  homepage: https://github.com/LLNL/benchpark
+  repository: ${{ git_url }}
+  documentation: https://software.llnl.gov/benchpark/
+  license: Apache-2.0
+  license_file:
+    - LICENSE
+    - NOTICE
+    - COPYRIGHT
+  summary: Reproducible specifications of HPC benchmarks and cross-site benchmarking environments
+  description: |
+    Benchpark is an open collaborative repository for reproducible
+    specifications of HPC benchmarks and cross-site benchmarking environments:
+    system specifications (hardware, compilers, MPI, schedulers), benchmark
+    specifications (built via Spack) and experiment specifications (run via
+    Ramble).
+
+    This package installs the benchpark source tree under
+    $PREFIX/share/benchpark and puts `benchpark` and `benchpark-python`
+    launchers on PATH. Mutable state — the bootstrapped Spack, Ramble and
+    spack-packages checkouts — lives outside the environment, under
+    ~/.benchpark (see config/bootstrap.yaml), so the installed prefix stays
+    read-only.
+
+extra:
+  recipe-maintainers:
+    - nicholaslivingstone 
