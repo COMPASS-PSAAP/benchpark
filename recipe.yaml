@@ -36,6 +36,10 @@ requirements:
     # benchpark itself
     - pyyaml
     - deepdiff
+    - pytest
+    - flake8
+    - pytest-cov
+    - coverage
     - xmltodict
     # Ramble runs under this same interpreter, so its imports have to resolve
     # here too (see requirements.txt in the repo).
